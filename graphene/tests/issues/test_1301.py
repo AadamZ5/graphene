@@ -1,7 +1,7 @@
 #https://github.com/graphql-python/graphene/issues/1301
 
-from graphene.types.field import Field, FieldDecorator
-from graphene import String, Int, ObjectType, field_property
+from graphene.types.field import FieldDecorator
+from graphene import String, Int, Field, ObjectType, field_property
 
 def test_issue():
     class MyType(ObjectType):
@@ -11,6 +11,15 @@ def test_issue():
         @field_property(type_=String)
         def my_property(self):
             return self._inside_property
+
+        @my_property.setter
+        def my_property(self, value):
+            print("Setting my_property!")
+            self._inside_property = value
+
+        @my_property.deleter
+        def my_property(self):
+            del self._inside_property
 
         def __init__(self):
             super().__init__()
@@ -27,3 +36,11 @@ def test_issue():
     assert mytype_inst.my_property == "special"
     # The attribute on an INSTANCE is not able to be detected as FieldDecorator or Field.
     assert isinstance(mytype_inst.my_property, Field) == False
+
+    #Test setter
+    mytype_inst.my_property = "not_special"
+    assert mytype_inst.my_property == "not_special"
+
+    #Test deleter
+    del mytype_inst.my_property
+    assert not hasattr(mytype_inst, 'my_property')

@@ -149,13 +149,13 @@ class FieldDecorator(Field):
         self.fget = fget
         self.fset = fset
         self.fdel = fdel
-        self.description = description
-        if self.description is None and self.fget is not None:
-            self.description = getdoc(self.fget)
+        if description is None and self.fget is not None:
+            description = getdoc(self.fget)
 
         #We should assume that `fget` is our property getter, and thus is our resolver method. 
-        super(FieldDecorator, self).__init__(type_, args=args, name=name, resolver=self.fget, deprecation_reason=deprecation_reason, description=self.description, required=required, default_value=default_value, **extra_args)
+        super(FieldDecorator, self).__init__(type_, args=args, name=name, resolver=self.fget, deprecation_reason=deprecation_reason, description=description, required=required, default_value=default_value, **extra_args)
     
+    #The get descriptor will call the function passed to us initially.
     def __get__(self, obj, objType=None):
         if obj is None:
             return self
@@ -163,11 +163,13 @@ class FieldDecorator(Field):
             return AttributeError("Can't get attribute!")
         return self.fget(obj)
         
+    #The set descriptor will call the function passed to us by using @<prop>.setter
     def __set__(self, obj, value):
         if self.fset is None:
             raise AttributeError("Can't set attribute!")
         self.fset(obj, value)
 
+    #The delete descriptor will call the function passed to us by using @<prop>.deleter
     def __delete__(self, obj):
         if self.fdel is None:
             raise AttributeError("Can't delete attribute!")
@@ -186,9 +188,16 @@ class FieldDecorator(Field):
         return type(self)(self.fget, self.fset, fdel, self._type, self.args, self.name, self.description, required, self.default_value, self.deprecation_reason)
 
 def field_property(func_=None, *a, type_=None, name=None, description=None, required=None, args=None, default_value=None, deprication_reason=None, **extra_args):
+    """
+    Denotes a property-style attribute as a Graphene field of type `type_`
+    """
+    
+    #Check if type_ is supplied and valid
+    if type_ is None or not isinstance(type_, UnmountedType):
+        raise TypeError("type_ Must be of type UnmountedType!")
+
     # If `field` is called without any arguments whatsoever, then `func` is implicitly supplied in the call.
     # If it is called with keyword arguments, then `func` is no longer implicitly supplied.
-
     if func_ != None:
         return FieldDecorator(func_, None, None, type_, args=args, name=name, description=description, required=required, default_value=default_value, deprecation_reason=deprication_reason, **extra_args)
     else:
