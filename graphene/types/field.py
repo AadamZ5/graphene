@@ -164,10 +164,14 @@ class FieldDecorator(Field):
         return self.fget(obj)
         
     def __set__(self, obj, value):
-        pass
+        if self.fset is None:
+            raise AttributeError("Can't set attribute!")
+        self.fset(obj, value)
 
     def __delete__(self, obj):
-        pass
+        if self.fdel is None:
+            raise AttributeError("Can't delete attribute!")
+        self.fdel(obj)
 
     def getter(self, fget):
         required = isinstance(self.type, NonNull)
