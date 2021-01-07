@@ -1,6 +1,8 @@
 import inspect
 from collections.abc import Mapping
 from functools import partial
+from inspect import getdoc
+from typing import Callable
 
 from .argument import Argument, to_arguments
 from .mountedtype import MountedType
@@ -136,3 +138,56 @@ class Field(MountedType):
         (parent_subscribe) if the Field definition has no subscribe.
         """
         return parent_subscribe
+
+class FieldDecorator(Field):
+    """
+    FieldDecorator is a class used to make a property-style attribute a Graphene field.
+
+    Warning! This class shouldn't be used as a decorator itself! 
+    """
+    def __init__(self, fget: Callable, fset: Callable, fdel: Callable, type_:UnmountedType, args=None, name:str=None, description:str=None, required:bool=None, default_value=None, deprecation_reason:str=None, **extra_args):
+        self.fget = fget
+        self.fset = fset
+        self.fdel = fdel
+        self.description = description
+        if self.description is None and self.fget is not None:
+            self.description = getdoc(self.fget)
+
+        #We should assume that `fget` is our property getter, and thus is our resolver method. 
+        super(FieldDecorator, self).__init__(type_, args=args, name=name, resolver=self.fget, deprecation_reason=deprecation_reason, description=self.description, required=required, default_value=default_value, **extra_args)
+    
+    def __get__(self, obj, objType=None):
+        if obj is None:
+            return self
+        if self.fget is None:
+            return AttributeError("Can't get attribute!")
+        return self.fget(obj)
+        
+    def __set__(self, obj, value):
+        pass
+
+    def __delete__(self, obj):
+        pass
+
+    def getter(self, fget):
+        required = isinstance(self.type, NonNull)
+        return type(self)(fget, self.fset, self.fdel, self._type, self.args, self.name, self.description, required, self.default_value, self.deprecation_reason)
+
+    def setter(self, fset):
+        required = isinstance(self.type, NonNull)
+        return type(self)(self.fget, fset, self.fdel, self._type, self.args, self.name, self.description, required, self.default_value, self.deprecation_reason)
+
+    def deleter(self, fdel):
+        required = isinstance(self.type, NonNull)
+        return type(self)(self.fget, self.fset, fdel, self._type, self.args, self.name, self.description, required, self.default_value, self.deprecation_reason)
+
+def field_property(func_=None, *a, type_=None, name=None, description=None, required=None, args=None, default_value=None, deprication_reason=None, **extra_args):
+    # If `field` is called without any arguments whatsoever, then `func` is implicitly supplied in the call.
+    # If it is called with keyword arguments, then `func` is no longer implicitly supplied.
+
+    if func_ != None:
+        return FieldDecorator(func_, None, None, type_, args=args, name=name, description=description, required=required, default_value=default_value, deprecation_reason=deprication_reason, **extra_args)
+    else:
+        def wrapper(func):
+            return FieldDecorator(func, None, None, type_, args=args, name=name, description=description, required=required, default_value=default_value, deprecation_reason=deprication_reason, **extra_args)
+        return wrapper

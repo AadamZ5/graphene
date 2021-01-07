@@ -8,7 +8,7 @@ from .datetime import Date, DateTime, Time
 from .decimal import Decimal
 from .dynamic import Dynamic
 from .enum import Enum
-from .field import Field
+from .field import Field, field_property
 from .inputfield import InputField
 from .inputobjecttype import InputObjectType
 from .interface import Interface
@@ -32,6 +32,7 @@ __all__ = [
     "Dynamic",
     "Enum",
     "Field",
+    "field_property",
     "Float",
     "ID",
     "InputField",
